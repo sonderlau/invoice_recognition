@@ -1,6 +1,14 @@
-# 发票 OCR
+# 发票 OCR - 数字识别的简单实现
 
-## 思路
+本教程旨在使用简单的操作步骤实现一个简单的发票上的数字视频。
+
+
+
+我们不追求识别率和速度，目的只是想让大家初步体验一下人工智能和计算机视觉 CV。
+
+
+
+## 大体思路
 
 - 解析图像 转换为 灰度图
 - 二值化处理
@@ -13,7 +21,7 @@
 
 
 
-## 目标
+## 处理的准备
 
 图片大小 1218*788
 
@@ -31,7 +39,7 @@
 
 ## 开始实践
 
-从我们上面的已知部分来看，我们的计划似乎是完美的，实际上手操作后，则处处都有困难...不管如何，先做起来再说！
+从我们上面的已知部分来看，我们的计划似乎是完美的，实际上手操作后，处处都有困难...不管如何，先做起来再说！
 
 
 
@@ -42,10 +50,13 @@
 如果大家有虚拟环境可以使用虚拟环境:
 
 ```python
+# 创建新的虚拟环境
 python -m virtualenv myenv
 
+# 进入虚拟环境
 source myenv/bin/activate
 
+# 安装
 pip install -r requirements.txt
 ```
 
@@ -65,15 +76,35 @@ pip install -r requirements.txt
 
 这样在使用一些第三方库的时候就不会出现找不到的问题了。
 
+
+
+如果使用 Anaconda 
+
+```bash
+conda create --name myenv python=3.8
+
+conda activate myenv
+
+conda install --file requirements.txt
+```
+
+
+
+提前安装好环境，后面实践部分就会得心应手一些。
+
+
+
 ### 数据集准备
 
 在完成机器学习的项目中，这部分实际上是相对而言最花时间的地方。
 
 我们要做的项目的数据集有时候不是那么丰富。比如我们的这个项目，发票这个东西是涉及到个人隐私的，一般是没有那么多的数据集提供给我们使用的，在这里我为大家提供了我在电商平台上买的一些东西的真实电子发票。
 
+一共 5 张，存储在 **invoice-images** 文件夹下。
 
 
-![](./data/test1.png)
+
+![](./invoice-images/test1.png)
 
 
 
@@ -96,11 +127,14 @@ pip install -r requirements.txt
 
 
 ```python
-im = Image.open("./data/test2.png")
-# 发票代码
+# 打开图片
+im = Image.open("./invoice-images/test2.png")
+
+# 截取图片
 code = im.crop((850, 15, 1180, 155))
 
-code.save("cut.png")
+# 保存
+code.save("./out/cut.png")
 ```
 
 
@@ -111,11 +145,11 @@ code.save("cut.png")
 
 
 
-运行上述代码之后我们就可以看到截好的图片了：
+运行上述代码之后我们就可以看到截好的图片(`cut.png`)了：
 
 
 
-![](./cut.png)
+![](./out/cut.png)
 
 
 
@@ -130,18 +164,23 @@ code.save("cut.png")
 
 
 ```python
-img = cv2.imread("cut.png")
+# 读取图片
+img = cv2.imread("./out/cut.png")
+
+# 转换
 gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-cv2.imwrite("gray.jpg", gray)
+
+# 保存
+cv2.imwrite("./out/gray.jpg", gray)
 ```
 
 
 
-这样我们就获得了一个灰度化后的图像：
+这样我们就获得了一个灰度化后的图像(`gray.jpg`)：
 
 
 
-![](./gray.jpg)
+![](./out/gray.jpg)
 
 
 
@@ -156,11 +195,7 @@ cv2.imwrite("thresh.jpg", thresh)
 
 
 
-`threshold()` 函数的参数
-
-[]: https://blog.csdn.net/u012566751/article/details/77046445	"OpenCV基础——threshold函数的使用"
-
-如下：
+`threshold()` 函数的参数 参考 [OpenCV基础——threshold函数的使用](https://blog.csdn.net/u012566751/article/details/77046445)
 
 - img - 待处理的图片
 - thresh - 阈值
@@ -217,6 +252,10 @@ cv2.imwrite("thresh.jpg", thresh)
 
 
 
+> img 待处理的图片，传入我们的灰度化后的图片。
+
+
+
 ### 寻找数字
 
 
@@ -225,7 +264,7 @@ cv2.imwrite("thresh.jpg", thresh)
 
 
 
-我们这里使用 `opencv` 提供的寻找轮廓的功能。这部分内容实质上是图论的一些内容，我们不必刻意追求理解。
+我们这里使用 `opencv` 提供的寻找轮廓的功能。这个方法的实现，我们暂且不需要理解底层的原理，会使用就可以了。
 
 
 
@@ -235,22 +274,25 @@ contours, hier = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SI
 
 
 
-这里我们传入二值化的数据，同时选择只识别最外面的一层轮廓，不然有些数字如 0，里面可能还会有一圈。后面我们则选择 仅保留轮廓上的拐点信息，即关键点。
+这里我们传入二值化的数据(`thresh`)，同时选择只识别最外面的一层轮廓(`cv2.RETR_EXTERNAL`)，不然有些数字如 0，里面可能还会有一圈。后面我们则选择 仅保留轮廓上的拐点信息(`cv2.CHAIN_APPROX_SIMPLE`)，即关键点，这样就足够我们使用的了，不需要太详细的轮廓点。
 
 
 
-我们不妨输出一下找好轮廓的图片：
+输出一下找好轮廓的图片：
 
 
 
 ```python
+# 遍历所有的轮廓
 for i in range(0, len(contours)):
+    # 取得轮廓的起始点 x,y  与该点分别向 横、纵 延伸的距离
     x, y, w, h = cv2.boundingRect(contours[i])
     print((x, y), (x + w, y + h))
     # 画出框框
     cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 255), 1)
 
-cv2.imwrite("save.jpg", img)
+# 保存
+cv2.imwrite("./out/save.jpg", img)
 ```
 
 
@@ -259,15 +301,15 @@ cv2.imwrite("save.jpg", img)
 
 
 
-看起来还不错，接下来就是把他们给分别的截下来。
+看起来还不错，接下来的任务则是把他们给分别的截取下来，我们要识别的是一个个的单独的数字。
 
 
 
-但是我们注意到，有一些文字的部分内容也被圈起来了，坐标的如发票代码这样的标题我们能很好的处理，但是右边 年月日 部分则要麻烦一点。
+但是我们要注意到，有一些文字的部分内容也被圈起来了，这部分是我们不想要的，因此我们要想办法去除掉。
 
 
 
-我们不妨直接一刀切：直接根据像素的多少决定要不要：
+观察一下，我们会发现数字的框框要大一些，我们不想要的框框往往都是一些小部分，于是我们这里不妨简单粗暴一些：直接根据像素的多少决定要不要
 
 
 
@@ -278,18 +320,20 @@ for i in range(0, len(contours)):
     # cv2.rectangle(img, (x, y), (x + w, y + h), (255, 0, 255), 1)
 
 	# 75 是个神秘的数字
-    if h*w >= 75:
+    if h * w >= 75:
+        # 截取图片，注意这里先传入 y 再传入 x
         newimage = thresh[y : y + h , x  : x + w ]
+        # 保存
         cv2.imwrite("./result/" + str(i) + ".jpg", newimage)
 ```
 
 
 
-这里我们规定了 75 作为分解的值，因为预设数据集是我使用第一张测试图片截取的结果，经过统计之后我认为这个值作为阈值是比较合适的。
+这里我们规定了 75 作为分解的值，因为预设数据集(已经截取好的10个数字图片)是我使用第一张测试图片(`test1.png`)截取的结果，经过统计之后我认为这个值作为阈值是比较合适的。
 
 
 
-现在，我们打开 result 文件夹就能看到一堆数字的图片了。
+现在，我们打开 result 文件夹就能看到一堆图片了。这些图片都是我们截取下来的单独的数字。
 
 
 
@@ -304,23 +348,36 @@ for i in range(0, len(contours)):
 因为我们要比较两个图片的相似程度，我们不妨先把这里图片转换成矩阵的形式，方便后面进行使用：
 
 ```python
-preset_path = "./preset"
+# 导包 我们这里使用 Pillow 包 导入的时候名字为 PIL
+from PIL import Image 
+import numpy as np
+import os
 
+# 预设图片的地址
+preset_path = "./number-preset-dataset"
+
+# 用来储存转换之后的矩阵
 store = {}
 
+# 写一个方法，方便后面调用
 def get_preset():
     for root, dirs, files in os.walk(preset_path):
         for f in files:
+            # 得到完整的路径 即 './preset/0.jpg'
             file_full_path = os.path.join(root, f)
-            # 用PIL中的Image.open打开图像
+            
+            # 用 Pillow 中的 Image.open 打开图像
             image = Image.open(file_full_path) 
-            # 转化成numpy数组
+            
+            # 转化成 numpy 数组
             arr = np.array(image) 
             
-            
+            # 对文件名分割 如 0.jpg => ('0', 'jpg')
             file_ext = f.rsplit('.', maxsplit=1)
+            # 得到文件名 文件名即是这个图片的真实数字
             file_name = file_ext[0]
-
+            
+            # 存到字典中
             store[file_name] = arr
 ```
 
@@ -342,17 +399,18 @@ def get_preset():
 
 
 
-两个矩阵之间的相似程度比较，我们首先想到的一个非常直观的方法：[余弦相似度法](https://www.jianshu.com/p/613ff3b1b4a8)
+两个矩阵之间的相似程度比较，我们首先想到的一个简单直观 的方法：[余弦相似度法](https://www.jianshu.com/p/613ff3b1b4a8)
 
 
 
-然而这里我们不能使用，因为我们截下来的数字图片的大小是不固定的，若你了解过矩阵的乘法就知道，两个矩阵能否相乘是有一定条件的。
+然而这里我们不能使用，因为我们截下来的数字图片的大小是不固定的。矩阵的乘法对两个矩阵的格式是有要求的，我们这里的矩阵大小只能有个大概的数值，是没办法确定的。
 
 
 
-这里我们只能退而求其次，计算一下这张图片的“哈希值”[^1]
+这里我们选择另外一种思路，计算一下这张图片的“哈希值”
 
-[^1]: [Zhihu - 计算两图的相似度（以图搜图）]()https://zhuanlan.zhihu.com/p/93893211
+[Zhihu - 计算两图的相似度（以图搜图）](https://zhuanlan.zhihu.com/p/93893211)
+
 
 
 
@@ -361,6 +419,7 @@ def get_preset():
 
 
 ```python
+# 计算灰度值的平均值
 avg = arr.mean()
             
 hash_val = ''
@@ -369,22 +428,38 @@ hash_val = ''
 for x in range(arr.shape[0]):
 	for y in range(arr.shape[1]):
 		if arr[x,y] > avg:
+            # 大于平均值 放1
 			hash_val += '1'
 		else:
+            # 小于平均值 放0
 			hash_val += '0'
 ```
 
 
 
-然后我们只要比较两个字符串的差异即可。这时候还是回到那个问题上，我们的两个字符串长度是不固定的，如何才能比较差异呢？
+然后我们只要比较两个字符串的差异即可。
+
+
+这时候还是回到那个问题上，我们的两个字符串长度是不固定的，如何才能比较差异呢？
 
 
 
-我这里使用了 [莱文斯坦距离](https://github.com/ztane/python-Levenshtein/) 来进行计算。简单来说是将字符串 a 变成 字符串 b 所需要进行变化的最少次数。
+我这里采取 [莱文斯坦距离 Levenshtein](https://github.com/ztane/python-Levenshtein/) 方法来进行计算。我们使用他提供的[ratio()函数](https://rawgit.com/ztane/python-Levenshtein/master/docs/Levenshtein.html#Levenshtein-ratio) 
+
+> `ratio(string1, string2)`
+>
+> ​	Compute similarity of two strings.
+>
+> ```python
+> ratio('Hello world!', 'Holly grail!')
+> # >>> 0.583333...
+> ratio('Brian', 'Jesus')
+> # >>> 0.0
+> ```
 
 
 
-好，问题终于解决了！
+这个方法会返回两个字符串的相似度，值在 `0.0 - 1.0` 之间。
 
 
 
@@ -404,31 +479,70 @@ for i in range(0, len(contours)):
 
 
     if h*w >= 75:
-        # ! 注意这里截取的是二值化后的图片
+        # !!! 注意这里截取的是二值化后的图片
         newimage = thresh[y : y + h , x  : x + w ]
         new_image_array = np.array(newimage)
         
-        # 比较
-        
+        # 初始字符串的相似度 这里用 负数值 -1，之后的比较最少也是 0 就会覆盖掉这个值
         init = -1
+        # 存储最大可能的数字 
         index = -1
         
         # store 即 预设数据的字典
         for k, v in store.items():
+            # 计算相似度
+            # 传入当前待识别图片的矩阵  以及所需要比较的一个感知哈希的字符串
             rsp = leven(new_image_array, v)
+            # 若当前的相似度大于上一个
             if rsp >= init:
+                # 则最有可能的数字为该数字 即 字典的 key 值 
                 index = k
+                # 更新 相似度的值
                 init = rsp
         
         print("result", index)
+        # 保存图片  
+        # 图片名称的格式为： i-index.jpg 其中 i 为循环的顺序数， index 为我们预测的最有可能的数字
         cv2.imwrite("./result/" + str(i) + "- "+  str(index) + ".jpg", img[y : y + h , x  : x + w ])
 ```
 
 
 
-
-
 这里的 `leven` 是我进行简单的包装之后的一个方法，因为传入进去的一个是 图片的矩阵，一个则是字符串，我们对其简单处理下返回比较之后的值。
+
+
+
+```python
+import numpy as np
+import Levenshtein
+
+def leven(raw_image, string:str):
+    """由 Levenshtein 算法计算相似度
+
+    Args:
+        raw_image (numpy.array): 图片数据的矩阵
+        string (str): 另外一张图片的感知哈希字符串
+
+    Returns:
+        float: 相似度
+    """
+    
+    avg = raw_image.mean()
+            
+    hash_val = ''
+    
+    for x in range(raw_image.shape[0]):
+        for y in range(raw_image.shape[1]):
+            if raw_image[x,y] > avg:
+                hash_val += '1'
+            else:
+                hash_val += '0'
+    
+    return Levenshtein.ratio(hash_val, string)
+
+```
+
+
 
 
 
@@ -484,23 +598,15 @@ for i in range(0, len(contours)):
 
 
 
-后续我们要进行更多的输入，进行统计，来看一下我们哪个数字的准确率低。更要关注错误识别的数字更容易被识别为哪些数字。
+后续我们要进行更多的输入，进行统计，来看一下我们哪个数字的准确率低。更要关注错误识别的数字更容易被识别为哪些数字，做针对性的改进。
 
 
 
-同时注意到我们还有三个不应该输入进来的，也就是截取到了非数字的部分，这是不应该的，则应该对截取部分的代码进行改善。
+同时注意到我们还有三个不应该输入进来的，也就是截取到了非数字的图片，这是不应该的。脏数据如果用作训练集中则会对模型产生不好的效果，即便我们这里是测试集，也应该尽量杜绝这种情况。
 
 
 
 ## 手写字体
-
-numpy 读取 mnist https://juejin.cn/post/6844903596991971336
-
-方法解读 
-
-MNIST 线性分类 https://github.com/LiuChaoXD/linear_neural
-
-
 
 既然我们对电子版的图片识别有了初步的成效，我们不妨就对手写的字体进行一次检测。
 
@@ -512,7 +618,7 @@ MNIST 线性分类 https://github.com/LiuChaoXD/linear_neural
 
 ### 环境搭建
 
-沿用上面搭建的就可以，但是这里我们要额外安装几个包，`matplotlib` 用来显示图片。
+沿用上面搭建的就可以，但是这里我们要额外使用几个包。如`matplotlib` 用来显示图片。
 
 
 
@@ -520,7 +626,11 @@ MNIST 线性分类 https://github.com/LiuChaoXD/linear_neural
 
 
 
-当然也可以不使用，直接运行代码也可以的。
+当然也可以不使用，直接运行代码也可以的。同时我也对这部分的代码提供了 Python 文件。
+
+
+
+关于 Jupyter Notebook 的内容感兴趣的同学可以自行去了解，这里就不多赘述。
 
 
 
@@ -528,7 +638,13 @@ MNIST 线性分类 https://github.com/LiuChaoXD/linear_neural
 
 我们使用 MNIST 手写数字集。MNIST 的识别可以说是 计算机视觉 学习的 Hello World 级别的入门案例。
 
-下载地址：[Lecun](http://yann.lecun.com/exdb/mnist/) 也可以使用我提供的阿里云下载地址 MD5:
+下载地址：[Lecun](http://yann.lecun.com/exdb/mnist/)
+
+若下载速度比较缓慢，教程的源代码包中 `mnist` 目录下也有解压好的文件。
+
+
+
+四个文件：
 
 
 
@@ -544,7 +660,7 @@ MNIST 线性分类 https://github.com/LiuChaoXD/linear_neural
 
 ### 预处理
 
-MNIST 手写数据集中已经为我们处理好了，只不过这里我们读取部分要稍微不同一些，这个格式稍微有些特别。这里涉及到一些文件储存格式的问题，我们就不细究了，感兴趣的同学可以访问参考[这篇文章](https://blog.csdn.net/simple_the_best/article/details/75267863)
+MNIST 手写数据集中已经为我们处理好了，只不过这里我们读取部分要稍微不同一些，这个格式稍微有些特别。这里涉及到一些文件储存格式的问题，我们就不细究了，感兴趣的同学可以访问参考[这篇文章](https://blog.csdn.net/simple_the_best/article/details/75267863) [还有这篇](https://juejin.cn/post/6844903596991971336)
 
 
 
@@ -581,6 +697,7 @@ def read_idx1(filename):
 
 
 ```python
+# 调用该方法
 train_labels = read_idx1("mnist/train-labels.idx1-ubyte")
 
 train_images = read_idx3("mnist/train-images.idx3-ubyte")
@@ -600,7 +717,12 @@ print(train_labels.shape, train_images.shape)
 
 ```python
 import matplotlib.pyplot as plt
+
 plt.subplot(121)
+
+# 我们输出第一张图片 即矩阵的整个第一行  同时我们对这个一维的行变成 二维的矩阵 
+# 这里 -1 是指 让 numpy 自己推断应该取多少
+# 因为我们的数据值都是 0-255 的灰度值，我们显示的时候也要指定为 灰度显示样式
 plt.imshow(train_images[0, :].reshape(28, -1), cmap='gray')
 plt.title('train 0')
 
@@ -625,13 +747,17 @@ OK，现在我们对数据集的格式有了大概的了解了，接下来我们
 
 
 
-为了节省时间，我们这里使用 **测试集** 中的图片作为我们的预设图片，因为测试集中只有 1w 张，相对少一点，我们使用训练集作为我们的测试。
+为了节省时间，我们这里使用 **测试集 t10k-images** 中的图片作为我们的预设图片，因为测试集中只有 1w 张，相对少一点，我们使用训练集作为我们的测试。
 
 
 
 
 
 ```python
+# 获取测试集
+test_labels = read_idx1("mnist/t10k-labels.idx1-ubyte")
+test_images = read_idx3("mnist/t10k-images.idx3-ubyte")
+
 print(test_images.shape)
 # >> (10000, 784)
 
@@ -662,9 +788,9 @@ def sHash(img):
 
 # 使用测试集 作为预处理
 for i in range(len(test_images)):
+    # 取出一张图片 即一整行
     img = test_images[i, :]
-    # 感知 哈希
-    
+    # 计算感知哈希并存到 对应数字的 list 中
     data[test_labels[i]].append(sHash(img))
 ```
 
@@ -687,8 +813,7 @@ for i in range(len(test_images)):
 
 
 ```python
-# 使用训练集的第一张用来测试
-
+# 使用训练集 train-images 中的第一张用来测试
 to_test_image = train_images[0, :]
 
 # 计算感知哈希
@@ -696,14 +821,19 @@ test_hash = sHash(to_test_image)
 
 def recognize_number(to_test_image_sHash:str):
     
+    # list 中 第 i 个位置的值即该图片为数字 i 的可能性
+    # 这里放 10 个 0
     result = [ 0 for i in range(10)]
     
     
     for k,v in data.items():
-    # k - 数字  v - 每个数字的所有感知哈希值
+    # k - 数字  v - 该数字的所有感知哈希值的 list
     # 遍历所有的哈希并计算值
         for hash_val in v:
+            # 计算该感知哈希和待测图片的感知哈希字符串的相似度
             leven_val = Levenshtein.ratio(to_test_image_sHash, hash_val)
+            # 令 result 中存储可能成为某个数字的最大可能性
+            # 即取最大相似度值
             if leven_val > result[k]:
                 result[k] = leven_val
 
@@ -715,17 +845,22 @@ def recognize_number(to_test_image_sHash:str):
 
 
 ```python
+# 调用
 result = recognize_number(test_hash)
+
+# 输出最大的可能性值
 print(max(result))
 
+# 输出最大可能值所在的位置 即 我们预测的最可能的数字
 print(result.index(max(result)))
 
+# 输出 预测值的 list
 print(result)
 ```
 
 
 
-这里输出的结果：
+输出的结果：
 
 
 
@@ -757,7 +892,7 @@ print(result)
 
 
 
-这里我使用 Photoshop，新建，这里需要注意几个设置
+这里我使用 Adobe Photoshop 2021，首先点击新建，这里需要特别注意几个设置：
 
 
 
@@ -765,7 +900,7 @@ print(result)
 
 
 
-规定好高和宽，这是我们所有数据的格式，同时我们要选择颜色模式为 **灰度**，背景内容为黑色，与图片的样子一样。
+规定好**高**和宽，即我们数据的格式 `28x28`，同时我们要选择颜色模式为 **灰度**，背景内容为黑色，与图片的样子一样。
 
 
 
@@ -777,16 +912,19 @@ print(result)
 
 
 
+保存为 jpg 的图片
+
+
+
 接着我们输入进去看看识别结果如何
 
 
 
 ```python
-# 使用我们自己写的图片
-
 from PIL import Image
 
-diy_image = Image.open('MNIST-6.jpg')
+# 读取图片
+diy_image = Image.open('./mnist/MNIST-6.jpg')
 
 # 降维成一维的数据
 diy_arr = np.array(diy_image).flatten()
@@ -799,8 +937,9 @@ plt.title('diy 0')
 # 再次降维，因为输出图片的时候我们进行了一次修改。
 diy_arr = diy_arr.flatten()
 
-# 计算哈希值，传入识别的函数中
+# 计算预测结果
 r = recognize_number(sHash(diy_arr))
+
 print(max(r))
 
 print(r.index(max(r)))
@@ -817,7 +956,7 @@ print(r)
 
 
 
-不错，我们成功的识别出来了。
+我们成功的识别出来了。
 
 
 
@@ -836,24 +975,31 @@ print(r)
 
 statis = {}
 
+# 用于统计的词典 分数字 每个数字都统计正确数和总数
 for i in range(0, 10):
     statis[i] = {}
     
+    # 正确数
     statis[i]["correct"] = 0
+    # 总数
     statis[i]["all"] = 0
 
-for i in range(2):
+# 取前100个图片
+for i in range(100):
+    # 计算图片的感知哈希
     shash_val = sHash(train_images[i, :])
     
-    
+    # 预测结果 list
     r = recognize_number(shash_val)
-    # 真实的值
+    
+    # 真实的值 即图片的 标签值
     real_val = train_labels[i]
     
     # 判断检测结果与真实值是否一致
     if r.index(max(r)) == real_val:
+        # 若正确则 正确数 +1
         statis[real_val]["correct"] += 1
-    
+    # 总数 +1
     statis[real_val]["all"] += 1
 
 
@@ -861,7 +1007,11 @@ for i in range(2):
 
 
 
-正如我们前面所说的，我们的处理方式是十分的低效的，每一次对比都要耗费大量时间。处理一张测试图片大概需要 4s 左右的时间，这对于实际应用来说是不能接受的处理时常。但我们这个项目追求的不是检测的准确率和效率，我们更是想从一个简单的案例上简单的入门一下计算机视觉。
+正如我们前面所说的，我们的处理方式是十分的低效的，每一次对比都要耗费大量时间。
+
+处理一张测试图片大概需要 4s 左右的时间，这对于实际应用来说是不能接受的处理时常。
+
+但我们这个项目追求的不是检测的准确率和效率，我们更是想从一个简单的案例上简单的入门一下计算机视觉。
 
 
 
@@ -901,7 +1051,7 @@ for i in range(2):
 
 ### 预处理
 
-二值化的时候我们不妨考虑对不同的数字或者部分进行不同的阈值。即便我们使用的电子版，放到足够大时我们会发现同一个数字的“颜色深浅”是有细微差别的，这点在我们进行二值化的时候会被放大到这个数字会有“笔画分离”的效果，这对于我们后面进行寻找轮廓的时候会带来很大的麻烦。
+二值化的时候我们不妨考虑对不同的数字或者部分使用不同的阈值。即一张图片对不同的子区域使用不同的阈值。因为即便我们使用电子版的图片，放到足够大时我们会发现同一个数字的笔画“颜色深浅”是有细微差别的，这点在我们进行二值化的时候会变成这个数字有“笔画断了”的效果，这对于我们后面进行寻找轮廓的时候会带来很大的麻烦。
 
 我们预设数据集由于每次进行检测的时候是不需要再进行处理的，我们就不妨对预设的数据集进行一次处理，持久保存到文件的形式。
 
@@ -910,9 +1060,9 @@ for i in range(2):
 
 ### 数据集
 
-最简单的方法，扩大数据集的量，对于预设数据(preset)中的数据应该不止有单一的一张，一个数字的预设图片应该多放几张
+最简单的方法，扩大数据集的量，对于预设数据中的数据应该不止有单一的一张，一个数字的预设图片应该多放几张。
 
-显然这会直接的提升每次进行预测时候的工作量，这时候就应该考虑下算法的优化了。
+显然这会直接的提升每次进行预测时候的工作量，那这时候就应该考虑下算法的优化了。
 
 ### 算法上的提升
 
@@ -934,6 +1084,14 @@ for i in range(2):
 
 [计算两图的相似性（以图搜图）](https://zhuanlan.zhihu.com/p/93893211)
 
+
+
+甚至是很简单的一些分类方法，比如
+
+
+
+[基于 MNIST 的线性分类实现](https://github.com/LiuChaoXD/linear_neural) 
+
 ### 从数字到文字
 
 然而我们的这个识别距离“能用”其实还是有不小的差距，因为我们连文字都无法识别出来，只能识别固定的格式的数字。
@@ -943,3 +1101,56 @@ for i in range(2):
 但若换成了文字，我们在“获取轮廓”部分就要多做一些处理。
 
 我们要对临近的“偏旁”或者“文字的小部分”结合起来成为一个整体的文字，汉字是十分复杂的，倘若碰上了 biang 这种字，我们的算法会遇到不小的难题。
+
+
+
+<img src="./README.assets/biang.jpg" alt="biang" style="zoom: 33%;" />
+
+
+
+## 源码结构
+
+
+
+中文为注释
+
+
+
+invoice_recognition
+ ├── assets ==README.md 文档编写使用的图片==
+ ├── calculate_difference.py ==使用 Levenshtein 算法计算相似度==
+ ├── invoice-images ==提供的5张发票图片==
+ │   ├── test1.png
+ │   ├── test2.png
+ │   ├── test3.png
+ │   ├── test4.png
+ │   └── test5.png
+ ├── mnist ==MNIST数据集==
+ │   ├── MNIST-6.jpg ==使用 Photoshop 输出的手写图片==
+ │   ├── t10k-images.idx3-ubyte
+ │   ├── t10k-labels.idx1-ubyte
+ │   ├── train-images.idx3-ubyte
+ │   └── train-labels.idx1-ubyte
+ ├── mnist-read.py ==mnist数据文件读取代码实现==
+ ├── mnist.ipynb ==手写图片识别的代码 为 Jupyter Notebook代码==
+ ├── mnist.py ==手写图片识别的代码 Python文件版本==
+ ├── number-cut  ==裁剪下来的单个数字图片==
+ ├── number-preset-dataset ==提供的10个图片预处理数据集==
+ ├── out ==处理之后输出的地址==
+ │   ├── cut.png ==裁剪之后的图片==
+ │   ├── gray.jpg ==灰度化后的图片==
+ │   ├── save.jpg  ==原图片==
+ │   └── thresh.jpg ==二值化后的图片==
+ ├── preset_analyse.py ==对预设的 10 个图片进行预处理分析==
+ ├── prediction.py ==进行预测并存储==
+ ├── pre_prosess.py ==预处理过程 即裁剪数字==
+ ├── README.assets ==README.md 文档编写使用的图片==
+ ├── README.md ==说明文档==
+ ├── README.pdf ==说明文档的 pdf格式==
+ ├── requirements.txt ==所需要的第三方库的说明文件==
+ └── result  ==识别结果储存文件夹==
+
+
+
+Made by SonderLau with :heart:
+

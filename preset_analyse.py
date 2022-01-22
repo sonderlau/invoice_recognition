@@ -1,11 +1,13 @@
-from fileinput import filename
+"""
+对预设的 10 个图片进行预处理分析
+
+"""
+
 from PIL import Image 
 import numpy as np
-import cv2
 import os
-from icecream import ic
 
-preset_path = "./preset"
+preset_path = "./number-preset-dataset"
 
 store = {}
 

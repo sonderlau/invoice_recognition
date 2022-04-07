@@ -195,11 +195,11 @@ cv2.imwrite("thresh.jpg", thresh)
 
 
 
-`threshold()` 函数的参数 参考 [OpenCV基础——threshold函数的使用](https://blog.csdn.net/u012566751/article/details/77046445)
+`threshold()` 函数的参数 参考 [Opencv-Simple Thresholding](https://www.geeksforgeeks.org/python-thresholding-techniques-using-opencv-set-1-simple-thresholding/)
 
-- img - 待处理的图片
-- thresh - 阈值
-- maxval - 最大值
+- source - 待处理的图片
+- thresholdValue - 阈值
+- maxVal - 最大值
 - type - 阈值类型
 
 
@@ -208,7 +208,7 @@ cv2.imwrite("thresh.jpg", thresh)
 
 > 阈值类型
 >
-> 我们选择的是 1 ，即大于阈值的变为 白，小于阈值的变为 最大值即我们这里设置的黑
+> 我们选择的是 1 ，即大于阈值的变为**白**，小于阈值的变为 最大值，即我们这里设置的**黑**
 
 
 
@@ -692,7 +692,7 @@ def read_idx1(filename):
 
 
 
-这里我们返回了一个 numpy 的数组，我们看一下他的形状：
+这里我们返回了一个 numpy 的矩阵，我们看一下他的形状：
 
 
 
